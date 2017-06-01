@@ -35,23 +35,32 @@ function authenticate(code, cb) {
     headers: { 'content-length': data.length }
   };
 
-  console.log('MAKING REQUEST:');
+  console.log('MAKING REQUEST WITH OPTIONS:');
   console.log(reqOptions);
   var body = "";
   var req = https.request(reqOptions, function(res) {
-    console.log('Response received!');
+    console.log('RESPONSE RECEIVED!');
 //     console.log(res);
     res.setEncoding('utf8');
-    res.on('data', function (chunk) { body += chunk; });
+    res.on('data', function (chunk) { 
+        body += chunk; 
+        console.log('ON DATA');
+        console.log(body);
+        console.log(chunk);
+    });
     res.on('end', function() {
+      console.log('ON END:');
+      console.log(body);
       cb(null, qs.parse(body).access_token);
     });
   });
-  console.log(data);
-  console.log(body);
   req.write(data);
   req.end();
-  req.on('error', function(e) { cb(e.message); });
+  req.on('error', function(e) {
+      console.log('ON ERROR:');
+      console.log(e);
+      cb(e.message); 
+  });
 }
 
 
@@ -68,6 +77,7 @@ app.get('/authenticate/:code', function(req, res) {
   console.log('authenticating code:' + req.params.code);
   authenticate(req.params.code, function(err, token) {
     var result = err || !token ? {"error": "bad_code"} : { "token": token };
+    console.log('FINISHED......);
     console.log(err);
     console.log(token);
     console.log(result);
