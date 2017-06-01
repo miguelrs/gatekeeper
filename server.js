@@ -35,17 +35,20 @@ function authenticate(code, cb) {
     headers: { 'content-length': data.length }
   };
 
+  console.log('MAKING REQUEST:');
+  console.log(reqOptions);
   var body = "";
   var req = https.request(reqOptions, function(res) {
     console.log('Response received!');
-    console.log(res);
+//     console.log(res);
     res.setEncoding('utf8');
     res.on('data', function (chunk) { body += chunk; });
     res.on('end', function() {
       cb(null, qs.parse(body).access_token);
     });
   });
-
+  console.log(data);
+  console.log(body);
   req.write(data);
   req.end();
   req.on('error', function(e) { cb(e.message); });
