@@ -37,6 +37,8 @@ function authenticate(code, cb) {
 
   var body = "";
   var req = https.request(reqOptions, function(res) {
+    console.log('Response received!');
+    console.log(res);
     res.setEncoding('utf8');
     res.on('data', function (chunk) { body += chunk; });
     res.on('end', function() {
@@ -63,6 +65,8 @@ app.get('/authenticate/:code', function(req, res) {
   console.log('authenticating code:' + req.params.code);
   authenticate(req.params.code, function(err, token) {
     var result = err || !token ? {"error": "bad_code"} : { "token": token };
+    console.log(err);
+    console.log(token);
     console.log(result);
     res.json(result);
   });
