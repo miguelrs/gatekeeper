@@ -1,92 +1,70 @@
-var url     = require('url'),
-    http    = require('http'),
-    https   = require('https'),
-    fs      = require('fs'),
-    qs      = require('querystring'),
+var fs = require('fs'),
     express = require('express'),
-    app     = express();
+    request = require('request'),
+    app = express();
 
 // Load config defaults from JSON file.
 // Environment variables override defaults.
 function loadConfig() {
-  var config = JSON.parse(fs.readFileSync(__dirname+ '/config.json', 'utf-8'));
-  for (var i in config) {
-    config[i] = process.env[i.toUpperCase()] || config[i];
-  }
-  console.log('Configuration');
-  console.log(config);
-  return config;
+    var config = JSON.parse(fs.readFileSync(__dirname + '/config.json', 'utf-8'));
+    for (var i in config) {
+        config[i] = process.env[i.toUpperCase()] || config[i];
+    }
+    console.log('Configuration');
+    console.log(config);
+    return config;
 }
 
 var config = loadConfig();
 
-function authenticate(code, cb) {
-  var data = qs.stringify({
-    client_id: config.oauth_client_id,
-    client_secret: config.oauth_client_secret,
-    code: code
-  });
+function authenticate(code, callback) {
+    var data = {
+        client_id: config.oauth_client_id,
+        client_secret: config.oauth_client_secret,
+        code: code
+    };
 
-  var reqOptions = {
-    host: config.oauth_host,
-    port: config.oauth_port,
-    path: config.oauth_path,
-    method: config.oauth_method,
-    headers: { 'content-length': data.length }
-  };
+    const uri = 'https://' + config.oauth_host + config.oauth_path;
 
-  console.log('MAKING REQUEST WITH OPTIONS:');
-  console.log(reqOptions);
-  var body = "";
-  var req = https.request(reqOptions, function(res) {
-    console.log('RESPONSE RECEIVED!');
-//     console.log(res);
-    res.setEncoding('utf8');
-    res.on('data', function (chunk) { 
-        body += chunk; 
-        console.log('ON DATA');
-        console.log(body);
-        console.log(chunk);
-    });
-    res.on('end', function() {
-      console.log('ON END:');
-      console.log(body);
-      cb(null, qs.parse(body).access_token);
-    });
-  });
-  req.write(data);
-  req.end();
-  req.on('error', function(e) {
-      console.log('ON ERROR:');
-      console.log(e);
-      cb(e.message); 
-  });
+    return request({
+        uri: uri,
+        method: config.oauth_method,
+        headers: {'content-length': data.length},
+        json: true,
+        body: data
+    }, callback);
 }
 
 
 // Convenience for allowing CORS on routes - GET only
 app.all('*', function (req, res, next) {
-  res.header('Access-Control-Allow-Origin', '*'); 
-  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS'); 
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  next();
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    next();
 });
 
+app.get('/authenticate/:code', function (req, res) {
+    console.log('authenticating code:' + req.params.code);
 
-app.get('/authenticate/:code', function(req, res) {
-  console.log('authenticating code:' + req.params.code);
-  authenticate(req.params.code, function(err, token) {
-    var result = err || !token ? {"error": "bad_code"} : { "token": token };
-    console.log('FINISHED......');
-    console.log(err);
-    console.log(token);
-    console.log(result);
-    res.json(result);
-  });
+    authenticate(req.params.code, function (error, response, data) {
+        var result;
+
+        if (error !== null || data.access_token === undefined) {
+            console.error(error);
+            result = error;
+        } else {
+            console.log('Access token received:');
+            console.log(data);
+            result = data;
+        }
+
+        res.json(result);
+    });
 });
 
 var port = process.env.PORT || config.port || 9999;
 
 app.listen(port, null, function (err) {
-  console.log('Gatekeeper, at your service: http://localhost:' + port);
+    console.log('Gatekeeper, at your service: http://localhost:' + port);
 });
