@@ -50,8 +50,8 @@ app.get('/authenticate/:code', function (req, res) {
     authenticate(req.params.code, function (error, response, data) {
         var result;
 
-        if (error !== null || data.access_token === undefined) {
-            console.error(error);
+        if (error !== null || !data.access_token) {
+            console.error(error || 'bad code');
             result = error;
         } else {
             console.log('Access token received:');
